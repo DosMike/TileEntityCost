@@ -1,0 +1,10 @@
+[{
+  "modid": "tileentitycost",
+  "name": "Tile Entity Cost",
+  "description": "Tile Entity Cost",
+  "version": "0.1",
+  "url": "",
+  "authorList": [ "DosMike" ],
+  "requiredMods": [ "spongeapi" ],
+  "dependencies": [ "spongeapi" ]
+}]
