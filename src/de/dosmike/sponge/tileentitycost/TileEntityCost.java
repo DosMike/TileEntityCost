@@ -1,16 +1,13 @@
 package de.dosmike.sponge.tileentitycost;
 
-import com.google.common.reflect.TypeToken;
 import com.google.inject.Inject;
 import de.dosmike.sponge.PlacerNBT.Placer;
 import ninja.leaping.configurate.commented.CommentedConfigurationNode;
 import ninja.leaping.configurate.loader.ConfigurationLoader;
-import ninja.leaping.configurate.objectmapping.ObjectMappingException;
 import ninja.leaping.configurate.objectmapping.serialize.TypeSerializerCollection;
 import ninja.leaping.configurate.objectmapping.serialize.TypeSerializers;
 import org.slf4j.Logger;
 import org.spongepowered.api.Sponge;
-import org.spongepowered.api.block.BlockSnapshot;
 import org.spongepowered.api.block.BlockType;
 import org.spongepowered.api.config.ConfigDir;
 import org.spongepowered.api.config.DefaultConfig;
@@ -30,10 +27,13 @@ import java.io.File;
 import java.io.IOException;
 import java.math.BigInteger;
 import java.nio.file.Path;
-import java.util.*;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Random;
 
 @Plugin(id="tileentitycost", name="Tile Entity Cost",
-        version="0.1", authors={"DosMike"})
+        version="0.1.1", authors={"DosMike"})
 public class TileEntityCost {
 
     public static void main(String[] args) { System.err.println("This plugin can not be run as executable!"); }

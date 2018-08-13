@@ -72,10 +72,13 @@ public class EventListeners {
                 tran.setValid(false);
             } else {
                 totalCost.add(cost);
-                acc.get().withdraw(cost);
                 TileEntityCost.getSyncScheduler().execute(()->{
-                    TileEntity te = tran.getFinal().getLocation().get().getTileEntity().get();
-                    setBlockPlacer(te, source);
+                    Optional<TileEntity> ote = tran.getFinal().getLocation().get().getTileEntity();
+                    ote.ifPresent(te->{
+                        setBlockPlacer(te, source);
+                        acc.get().withdraw(cost);
+                    });
+                    //otherwise the tileentity vaporizezd - maybe by protection plugin?
                 });
             }
         });
