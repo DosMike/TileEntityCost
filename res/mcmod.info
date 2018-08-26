@@ -2,7 +2,7 @@
   "modid": "tileentitycost",
   "name": "Tile Entity Cost",
   "description": "Tile Entity Cost",
-  "version": "0.1.1",
+  "version": "0.2",
   "url": "",
   "authorList": [ "DosMike" ],
   "requiredMods": [ "spongeapi" ],

@@ -2,6 +2,7 @@ package de.dosmike.sponge.tileentitycost;
 
 import com.google.inject.Inject;
 import de.dosmike.sponge.PlacerNBT.Placer;
+import ic2.core.IC2;
 import ninja.leaping.configurate.commented.CommentedConfigurationNode;
 import ninja.leaping.configurate.loader.ConfigurationLoader;
 import ninja.leaping.configurate.objectmapping.serialize.TypeSerializerCollection;
@@ -31,9 +32,10 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Random;
+import java.util.concurrent.TimeUnit;
 
 @Plugin(id="tileentitycost", name="Tile Entity Cost",
-        version="0.1.1", authors={"DosMike"})
+        version="0.2", authors={"DosMike"})
 public class TileEntityCost {
 
     public static void main(String[] args) { System.err.println("This plugin can not be run as executable!"); }
@@ -70,6 +72,7 @@ public class TileEntityCost {
 
     /// --- === Main Plugin stuff === --- \\\
 
+    SpongeExecutorService.SpongeFuture accountSynchronizer;
 
     @Inject
     @DefaultConfig(sharedRoot = false)
@@ -102,13 +105,21 @@ public class TileEntityCost {
         CommandRegistra.register();
 
         loadConfigs();
+        accountSynchronizer = syncScheduler.scheduleWithFixedDelay(TileEntityCost::ThinkTick,50,50,TimeUnit.MILLISECONDS);
 
         l("Tile Entity Tracker now active!");
     }
 
+    private static void ThinkTick() {
+        ShortTermMemeory.thinkTick();
+        TileEntityAccountManager.synchronize();
+    }
+
     @Listener
     public void onServerStopping(GameStoppingEvent event) {
+        accountSynchronizer.cancel(false);
         saveConfigs();
+        TileEntityAccountManager.synchronize();
     }
 
     @Listener
@@ -199,9 +210,32 @@ public class TileEntityCost {
     private static Map<String, Integer> tecByModID = new HashMap<>();
     private static Integer tecDefault = 0;
     private static int defaultBalance = 100;
+    static BigInteger setBlockPrice(BlockType type, Integer price) {
+        BigInteger old = getCostFor(type);
+        if (price < 0)
+            tecByBlockID.remove(type.getId());
+        else
+            tecByBlockID.put(type.getId(), price);
+        return old;
+    }
+    static BigInteger setModPrice(String modid, Integer price) {
+        Integer old = tecByModID.get(modid);
+        if (price < 0)
+            tecByModID.remove(modid);
+        else
+            tecByModID.put(modid, price);
+        return BigInteger.valueOf(old==null?tecDefault:old);
+    }
+    static BigInteger setDefaultPrice(Integer price) {
+        if (price < 0) price = 0;
+        Integer old = tecDefault;
+        tecDefault = price;
+        return BigInteger.valueOf(old==null?tecDefault:old);
+    }
 
     private static Map<String, Boolean> isTileEntityCache = new HashMap<>();
 
+    static void setDefaultBalance(int newDefault) { defaultBalance = newDefault; }
     public static int getDefaultBalance() {
         return defaultBalance;
     }
@@ -228,8 +262,11 @@ public class TileEntityCost {
     }
 
     public static void regTE(BlockType type, boolean isTE) {
-        if (tecByBlockID.containsKey(type.getId())) return;
-        isTileEntityCache.put(type.getId(), isTE);
+        Boolean v = isTileEntityCache.get(type.getId());
+        isTE = isTE || (v!=null&&v);
+//        if (tecByBlockID.containsKey(type.getId())) return;
+        if (v==null||isTE)
+            isTileEntityCache.put(type.getId(), isTE);
     }
     public static Optional<Boolean> isTileEntity(BlockType type) {
         if (tecByBlockID.containsKey(type.getId())) return Optional.of(true);
@@ -243,7 +280,7 @@ public class TileEntityCost {
 
     private void addPrice(String s, int anInt) {
         if (anInt < 0) {
-            w("Invalid Price for %s: %d", s, anInt);
+            w("Invalid cost for %s: %d", s, anInt);
             return;
         }
         if (s.indexOf(':')>0) {
@@ -263,7 +300,7 @@ public class TileEntityCost {
     }
     private void addPriceMod(String s, int anInt) {
         if (anInt < 0) {
-            w("Invalid Price for %s: %d", s, anInt);
+            w("Invalid cost for %s: %d", s, anInt);
             return;
         }
         if (!Sponge.getPluginManager().getPlugin(s).isPresent()) {
@@ -274,7 +311,7 @@ public class TileEntityCost {
     }
     private void addPriceBlock(String s, int anInt) {
         if (anInt < 0) {
-            w("Invalid Price for %s: %d", s, anInt);
+            w("Invalid cost for %s: %d", s, anInt);
             return;
         }
         Optional<BlockType> bt = Sponge.getRegistry().getType(BlockType.class, s);

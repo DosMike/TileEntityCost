@@ -4,15 +4,13 @@ import de.dosmike.sponge.autosql.AutoSQL;
 import org.spongepowered.api.entity.living.player.Player;
 
 import java.lang.reflect.Field;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Optional;
-import java.util.UUID;
+import java.util.*;
 
 public class TileEntityAccountManager {
 
     static final Map<UUID, TileEntityAccount> accounts = new HashMap<>();
     static AutoSQL<TileEntityAccount> sql;
+    private static final Set<UUID> dirty = new HashSet<>();
 
     private static Field dbKey;
     static void init() {
@@ -45,12 +43,25 @@ public class TileEntityAccountManager {
         }
     }
 
-    static void synchronize(TileEntityAccount account) {
-        sql.insertOrUpdate(account, dbKey);
+    static void synchronize() {
+        synchronized (dirty) {
+            for (UUID uid : dirty) {
+                getAccount(uid).ifPresent(account->
+                    sql.insertOrUpdate(account, dbKey)
+                );
+            }
+        }
+    }
+
+    /** notify the manager to synchhronize the account with the database in the future */
+    public static void markForUpdate(TileEntityAccount account) {
+        synchronized (dirty) {
+            dirty.add(account.playerID);
+        }
     }
 
     /** @return the account for this player or empty if the player is not online */
-    static Optional<TileEntityAccount> getAccount(UUID player) {
+    public static Optional<TileEntityAccount> getAccount(UUID player) {
         synchronized (accounts) {
             return Optional.ofNullable(accounts.get(player));
         }
